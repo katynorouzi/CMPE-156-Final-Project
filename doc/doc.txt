@@ -1,0 +1,27 @@
+Name: 	Katayoun Norouzi
+Email:	knorouzi@ucsc.edu
+Class:	CMPE156/L - Winter 2016
+Assign:	Final Project
+
+
+
+
+Typing 'make' in the root folder will build executable rserver in the bin folder.
+the executable is started as rserver VIRTUAL_IP VIRTUAL_PORT.
+The virtual port here must always be 520, as the topology maps only IP addresses of nodes, not ports... Soeach node needs an unique virtual IP.
+
+The default timeouts are 5 seconds for the 'small random delay' of both periodic and triggered transmit, 30 seconds for the periodic update period,
+180 seconds for gateway timeout, and 120 seconds for gateway being removed (garbage collected delay)
+For testing if additional parameter is supplied (its value is ignored) delays are modified as small=2sec, update=3 sec, timeout = 18 sec, garbage =12 sec for less waiting when testing.
+
+
+The application layer protocols is the same as the RIP protocol, it only processes message type 2 , version 1 messages, and processes only family=2 entries. As a special note, if a node has no routing table to send it sends an empty one, this is necessary as the node has to send something to announce its presence to the others, else after start up of all nodes no one would transit anything as no one will have any routing table to transit, but not transmitting will not allow nodes to detect each other.
+
+The implementation consists of one main loop that mostly waits on select.
+It doesn't use the explicit timer's code, but manually modifies the select's timeout value to match the next event - next event may be periodic transmission, triggered transmission, node timeout or node garbage collections, all event's moments are compared and closest one is chosen as select's timeout value.
+Each entry in the routing table may be in state FREE - empty entry, ACTIVE - currently valid entry, TIMEOUT - entry has timed out, or been forced invalid by its gateway. Another fields in the entry are the dest ip, gateway ip, dest distance,  timeout time (the moment when the node will timeout), and gc_time  (the moment when node will be erased).
+
+The nodes implements split horizon with poisoned reverse - a node sends to another node all the entries that use this other node as gateway as a metric of inifinity.
+Nodes implement also triggered update - after each change in the routing table if there is no pending triggered update a small random time is addded to the current moment, and if this time is sooner the n the periodic update when this time comes an update is performed.
+
+The nodes have no sense of network segments or masks, and send each update as normal UDP packet to each neighbour( or pachets if more than 25 entries).
